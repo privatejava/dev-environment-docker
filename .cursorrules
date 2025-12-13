@@ -1,0 +1,41 @@
+# Cursor Rules for Dev Environment Docker Project
+
+## Project Context
+This is a development environment Docker image optimized for Node.js and Python development. The container defaults to interactive bash mode for immediate coding.
+
+## Key Principles
+1. **Default to interactive bash** - not SSH daemon
+2. **Optimize for developer productivity** - pre-install everything
+3. **Keep layers minimal** - combine RUN commands where possible
+4. **Separate concerns** - Cursor CLI in separate RUN for easy updates
+5. **User is `devuser`** - not root (unless explicitly needed)
+
+## Important Variables
+- Container user: `devuser` (defined in Dockerfile ENV)
+- Makefile uses: `CONTAINER_USER=devuser` (NOT `USERNAME` to avoid host conflicts)
+- Image name: `dev-environment:latest` (configurable)
+
+## Common Patterns
+- Build: `make build`
+- Run: `make run` (interactive bash)
+- SSH mode: `make run-sshd PORT=2222`
+- Update Cursor CLI: Edit Dockerfile lines 117-132
+
+## File Structure
+- `Dockerfile` - Main image definition
+- `docker-entrypoint.sh` - Handles bash/SSH mode switching
+- `Makefile` - Convenient commands
+- `.ai-context.md` - Detailed project memory/context
+
+## When Adding Tools
+- System packages: Add to apt-get list (Dockerfile lines 10-61)
+- Node.js: Add to npm install -g (lines 90-100)
+- Python: Add to pip install (lines 119-131)
+- Keep related tools in same RUN command for caching
+
+## Remember
+- Container auto-removes on exit (`--rm` flag)
+- Workspace directories: `~/workspace`, `~/projects`
+- All tools are pre-configured and ready to use
+- Entrypoint script handles default behavior intelligently
+
