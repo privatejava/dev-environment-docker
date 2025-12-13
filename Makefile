@@ -1,7 +1,7 @@
 # Makefile for Docker Image Build System
 # Provides convenient commands for building and managing the dev-environment image
 
-.PHONY: help build build-no-cache build-pull tag push clean inspect run run-sshd stop logs shell bash bash-root test
+.PHONY: help build build-no-cache build-pull tag push clean inspect run bash bash-root stop logs shell test
 
 # Configuration
 IMAGE_NAME ?= dev-environment
@@ -78,26 +78,30 @@ tag: ## Tag the image with a new tag (usage: make tag NEW_TAG=v1.0.0)
 
 ##@ Container Management
 
-run: ## Run the container interactively with bash (default behavior)
+run: ## Run the container with SSH daemon (default - keeps container alive, usage: make run PORT=2222 SSH_PUBLIC_KEY="$(cat ~/.ssh/id_rsa.pub)")
+	@PORT=$${PORT:-2222}; \
+	echo "Starting container with SSH daemon on port $$PORT..."; \
+	docker rm -f dev-env 2>/dev/null || true; \
+	if [ -n "$$SSH_PUBLIC_KEY" ]; then \
+		docker run -d \
+			-p $$PORT:22 \
+			-e SSH_PUBLIC_KEY="$$SSH_PUBLIC_KEY" \
+			--name dev-env \
+			$(FULL_IMAGE_NAME); \
+	else \
+		docker run -d \
+			-p $$PORT:22 \
+			--name dev-env \
+			$(FULL_IMAGE_NAME); \
+	fi
+	@echo "Container 'dev-env' is running!"
+	@echo "SSH into it: ssh -p $${PORT:-2222} $(CONTAINER_USER)@localhost"
+
+bash: ## Run the container interactively with bash (container exits when you exit)
 	@echo "Starting interactive bash session as $(CONTAINER_USER)..."
-	@echo "Note: Container will exit when you type 'exit'"
 	@docker run -it --rm \
 		--name dev-env-interactive \
-		$(FULL_IMAGE_NAME)
-
-run-sshd: ## Run the container in background with SSH daemon (usage: make run-sshd PORT=2222)
-	@PORT=$${PORT:-2222}; \
-	echo "Running container from $(FULL_IMAGE_NAME) on port $$PORT with SSH daemon..."; \
-	docker run -d \
-		-p $$PORT:22 \
-		--name dev-env \
-		$(FULL_IMAGE_NAME) sshd || \
-	(docker rm -f dev-env 2>/dev/null || true) && \
-	docker run -d \
-		-p $$PORT:22 \
-		--name dev-env \
-		$(FULL_IMAGE_NAME) sshd
-	@echo "Container 'dev-env' is running with SSH daemon!"
+		$(FULL_IMAGE_NAME) bash
 
 stop: ## Stop the running container
 	@echo "Stopping container 'dev-env'..."
@@ -109,9 +113,6 @@ logs: ## Show container logs
 
 shell: ## Get a shell in the running container
 	@docker exec -it dev-env /bin/bash
-
-bash: ## Run container interactively with bash prompt (same as 'make run', default behavior)
-	@$(MAKE) run
 
 bash-root: ## Run container interactively as root with bash prompt
 	@echo "Starting interactive bash session as root..."

@@ -46,11 +46,14 @@ make build-no-cache
 # Build with verbose output
 make build-verbose
 
-# Run the container interactively with bash (DEFAULT - recommended)
-make run
+# Run the container with SSH daemon (DEFAULT - keeps container alive)
+make run PORT=2222
 
-# Run container in background with SSH daemon
-make run-sshd PORT=2222
+# With SSH public key (so you can login immediately)
+make run PORT=2222 SSH_PUBLIC_KEY="$(cat ~/.ssh/id_rsa.pub)"
+
+# Run interactively with bash (container exits when you exit)
+make bash
 
 # View logs (for SSH mode)
 make logs
@@ -128,13 +131,12 @@ export BUILD_CONTEXT=.
 - `build-pull`: Build with --pull flag
 - `build-verbose`: Build with verbose output
 - `tag`: Tag the image (usage: `make tag NEW_TAG=v1.0.0`)
-- `run`: Run the container interactively with bash (DEFAULT - recommended)
-- `run-sshd`: Run the container in background with SSH daemon (usage: `make run-sshd PORT=2222`)
-- `stop`: Stop the running container (SSH mode)
-- `logs`: Show container logs (SSH mode)
-- `shell`: Get a shell in the running container (requires container to be running in SSH mode)
-- `bash`: Start interactive bash session (same as `make run`)
-- `bash-root`: Start interactive bash session as root
+- `run`: Run the container with SSH daemon (DEFAULT - keeps container alive, usage: `make run PORT=2222 SSH_PUBLIC_KEY="$(cat ~/.ssh/id_rsa.pub)"`)
+- `bash`: Run the container interactively with bash (container exits when you exit)
+- `bash-root`: Run the container interactively as root
+- `stop`: Stop the running container
+- `logs`: Show container logs
+- `shell`: Get a shell in the running container (requires container to be running)
 - `inspect`: Inspect the Docker image
 - `size`: Show image size
 - `history`: Show image build history
@@ -142,59 +144,52 @@ export BUILD_CONTEXT=.
 - `clean-all`: Remove image and stop/remove container
 - `test`: Run basic tests on the image
 
-## Default Behavior: Interactive Bash
+## Default Behavior: SSH Daemon (Container Stays Alive)
 
-**The container now defaults to interactive bash mode!** When you run the container without arguments, it automatically starts an interactive bash session as `devuser`.
+**The container defaults to SSH daemon mode** - it starts and stays running so you can SSH into it anytime.
 
-### Quick Start - Interactive Bash (Default)
+### Quick Start - SSH Daemon (Default)
 
-**Using Make (Recommended):**
+**Using Make:**
 ```bash
-# Start interactive bash as devuser (DEFAULT - simplest way)
-make run
+# Start container with SSH daemon (keeps container alive)
+make run PORT=2222
 
-# Or explicitly
-make bash
-
-# Start interactive bash as root
-make bash-root
+# With SSH public key (so you can login immediately)
+make run PORT=2222 SSH_PUBLIC_KEY="$(cat ~/.ssh/id_rsa.pub)"
 ```
 
 **Using Docker directly:**
 ```bash
-# Interactive bash as devuser (DEFAULT - just run the container)
-docker run -it --rm dev-environment:latest
+# Start container with SSH daemon (DEFAULT)
+docker run -d -p 2222:22 --name dev-env dev-environment:latest
 
-# Interactive bash as root
-docker run -it --rm dev-environment:latest /bin/bash
+# With SSH public key
+docker run -d -p 2222:22 \
+  -e SSH_PUBLIC_KEY="$(cat ~/.ssh/id_rsa.pub)" \
+  --name dev-env \
+  dev-environment:latest
+
+# SSH into the container
+ssh -p 2222 devuser@localhost
 ```
 
 **Key points:**
-- **Default behavior**: Container automatically starts interactive bash
-- `-it` flags enable interactive terminal (required)
-- `--rm` automatically removes the container when you exit
-- Container starts and stops with your session
-- All your development tools (Node.js, Python, etc.) are available immediately
-- You're automatically in `~/workspace` or `~/projects` directory
-- Type `exit` to leave the container
+- **Default behavior**: Container starts SSH daemon and stays alive
+- Container runs in background (`-d` flag)
+- Pass `SSH_PUBLIC_KEY` env var to enable immediate SSH access
+- Container keeps running until you stop it
 
-### Running Container in Background (SSH Mode)
+### Interactive Bash Mode (Optional)
 
-If you want to keep the container running and access it via SSH:
+If you want an interactive bash session that exits when you're done:
 
 ```bash
-# Start container in background with SSH daemon
-make run-sshd PORT=2222
-# or
-docker run -d -p 2222:22 --name dev-env dev-environment:latest sshd
+# Using Make
+make bash
 
-# Then access via SSH (after setting up keys)
-ssh -p 2222 devuser@localhost
-
-# Or get a shell in running container
-make shell
-# or
-docker exec -it dev-env /bin/bash
+# Using Docker
+docker run -it --rm dev-environment:latest bash
 ```
 
 ## SSH Configuration
@@ -206,6 +201,32 @@ The image is configured with:
 - Password authentication: Disabled (key-based only)
 
 ### Setting Up SSH Access
+
+**Simple way - Pass your public key as environment variable:**
+
+```bash
+# Using Make
+make run PORT=2222 SSH_PUBLIC_KEY="$(cat ~/.ssh/id_rsa.pub)"
+
+# Using Docker directly
+docker run -d -p 2222:22 \
+  -e SSH_PUBLIC_KEY="$(cat ~/.ssh/id_rsa.pub)" \
+  --name dev-env \
+  dev-environment:latest
+
+# Or pass the key directly
+docker run -d -p 2222:22 \
+  -e SSH_PUBLIC_KEY="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAA..." \
+  --name dev-env \
+  dev-environment:latest
+
+# Then SSH into the container
+ssh -p 2222 devuser@localhost
+```
+
+### Manual SSH Key Setup (Alternative)
+
+If you prefer to set up SSH keys manually after the container is running:
 
 1. Generate SSH key pair (if you don't have one):
    ```bash

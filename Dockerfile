@@ -3,7 +3,9 @@ FROM python:3.11-slim-bullseye
 
 # Set environment variables for the SSH setup
 ENV SSH_PORT=22 \
-    USERNAME=devuser
+    USERNAME=devuser \
+    LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8
 
 # --- Install comprehensive development tools and configure SSH ---
 RUN apt-get update && \
@@ -168,6 +170,10 @@ RUN git config --global init.defaultBranch main && \
 
 # --- Create useful aliases and shell enhancements ---
 RUN echo '' >> ~/.bashrc && \
+    echo '# Locale settings' >> ~/.bashrc && \
+    echo 'export LANG=C.UTF-8' >> ~/.bashrc && \
+    echo 'export LC_ALL=C.UTF-8' >> ~/.bashrc && \
+    echo '' >> ~/.bashrc && \
     echo '# Development aliases' >> ~/.bashrc && \
     echo 'alias ll="ls -alF"' >> ~/.bashrc && \
     echo 'alias la="ls -A"' >> ~/.bashrc && \
@@ -205,7 +211,7 @@ RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 EXPOSE ${SSH_PORT}
 
 # --- Runtime Setup ---
-# Default behavior: interactive bash as devuser
-# To run SSH daemon: docker run ... dev-environment:latest sshd
+# Default behavior: SSH daemon (keeps container alive)
+# To run interactive bash: docker run -it ... dev-environment:latest bash
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
-CMD []
+CMD ["sshd"]
