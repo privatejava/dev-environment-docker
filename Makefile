@@ -151,8 +151,8 @@ test: ## Run basic tests on the image
 	@echo "Testing $(FULL_IMAGE_NAME)..."
 	@echo "1. Checking if image exists..."
 	@docker image inspect $(FULL_IMAGE_NAME) > /dev/null 2>&1 || (echo "Error: Image not found!" && exit 1)
-	@echo "2. Testing container startup..."
-	@docker run --rm -d --name test-dev-env $(FULL_IMAGE_NAME) > /dev/null 2>&1 || (echo "Error: Container failed to start!" && exit 1)
+	@echo "2. Testing container startup with SSH daemon..."
+	@docker run --rm -d --name test-dev-env $(FULL_IMAGE_NAME) sshd > /dev/null 2>&1 || (echo "Error: Container failed to start!" && exit 1)
 	@sleep 2
 	@docker exec test-dev-env ps aux | grep -q sshd || (echo "Error: SSH daemon not running!" && docker rm -f test-dev-env && exit 1)
 	@docker rm -f test-dev-env > /dev/null 2>&1
