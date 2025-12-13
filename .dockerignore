@@ -6,6 +6,9 @@
 # Documentation
 README.md
 *.md
+.ai-context.md
+.cursorrules
+PROJECT-SUMMARY.md
 
 # Build scripts
 build.sh
