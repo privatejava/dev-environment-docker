@@ -1,0 +1,35 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+*.md
+
+# Build scripts
+build.sh
+Makefile
+
+# IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary files
+*.tmp
+*.log
+*.cache
+
+# Docker files (don't include in build context unnecessarily)
+docker-compose*.yml
+.dockerignore
+
+# Other
+.env
+*.bak
+*.backup
+
