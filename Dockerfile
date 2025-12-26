@@ -114,15 +114,22 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | b
     NODE_PATH=$(nvm which default) && \
     NODE_DIR=$(dirname "$NODE_PATH") && \
     # Add nvm to PATH for interactive and non-interactive shells
-    # Note: nvm automatically adds npm global bin to PATH, no need to configure npm prefix
+    # Note: nvm automatically manages PATH when sourced, we just need to source it
+    # For .bashrc (interactive shells)
     echo 'export NVM_DIR="$HOME/.nvm"' >> ~/.bashrc && \
     echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> ~/.bashrc && \
     echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"' >> ~/.bashrc && \
-    echo "export PATH=\"$NODE_DIR:\$PATH\"" >> ~/.bashrc && \
-    # Also add to .profile for non-interactive shells
+    echo 'nvm use default >/dev/null 2>&1 || true' >> ~/.bashrc && \
+    # For .profile (login shells - SSH uses this for sh/bash)
     echo 'export NVM_DIR="$HOME/.nvm"' >> ~/.profile && \
     echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> ~/.profile && \
-    echo "export PATH=\"$NODE_DIR:\$PATH\"" >> ~/.profile && \
+    echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"' >> ~/.profile && \
+    echo 'nvm use default >/dev/null 2>&1 || true' >> ~/.profile && \
+    # For .bash_profile (login bash shells - SSH uses this)
+    echo 'export NVM_DIR="$HOME/.nvm"' >> ~/.bash_profile && \
+    echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> ~/.bash_profile && \
+    echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"' >> ~/.bash_profile && \
+    echo 'nvm use default >/dev/null 2>&1 || true' >> ~/.bash_profile && \
     # Create common development directories
     mkdir -p ~/projects ~/workspace
 
@@ -154,9 +161,10 @@ RUN export NVM_DIR="$HOME/.nvm" && \
      echo "  You may need to install manually after container starts:" && \
      echo "  npm install -g @anthropic-ai/claude-code" && \
      CLAUDE_INSTALLED=false) && \
-    # Add common Claude Code CLI paths to PATH
+    # Add common Claude Code CLI paths to PATH (for all shell types)
     echo 'export PATH="$HOME/.claude/bin:$HOME/.local/bin/claude:$PATH"' >> ~/.bashrc && \
     echo 'export PATH="$HOME/.claude/bin:$HOME/.local/bin/claude:$PATH"' >> ~/.profile && \
+    echo 'export PATH="$HOME/.claude/bin:$HOME/.local/bin/claude:$PATH"' >> ~/.bash_profile && \
     mkdir -p ~/.config/claude-code && \
     # Add Claude Code to welcome banner info (if installed)
     if [ "$CLAUDE_INSTALLED" = "true" ]; then \
@@ -180,9 +188,10 @@ RUN python3 -m pip install --upgrade pip setuptools wheel && \
     mypy \
     requests \
     && \
-    # Add Python user bin to PATH
+    # Add Python user bin to PATH (for all shell types)
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && \
-    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.profile
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.profile && \
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bash_profile
 
 # --- Configure Git (with sensible defaults) ---
 RUN git config --global init.defaultBranch main && \
@@ -246,15 +255,20 @@ RUN echo '' >> ~/.bashrc && \
     echo '# Set default directory' >> ~/.bashrc && \
     echo 'cd ~/workspace 2>/dev/null || cd ~/projects 2>/dev/null || true' >> ~/.bashrc && \
     # Ensure .bashrc is sourced for login shells (SSH sessions)
+    # .bash_profile sources .bashrc for bash login shells
     echo 'if [ -f ~/.bashrc ]; then' >> ~/.bash_profile && \
     echo '    . ~/.bashrc' >> ~/.bash_profile && \
     echo 'fi' >> ~/.bash_profile && \
-    # Also ensure .profile sources .bashrc
+    # .profile sources .bashrc for bash shells (SSH uses this)
     echo 'if [ -n "$BASH_VERSION" ]; then' >> ~/.profile && \
     echo '    if [ -f ~/.bashrc ]; then' >> ~/.profile && \
     echo '        . ~/.bashrc' >> ~/.profile && \
     echo '    fi' >> ~/.profile && \
-    echo 'fi' >> ~/.profile
+    echo 'fi' >> ~/.profile && \
+    # Also add essential environment variables directly to .profile for non-bash shells
+    echo 'export LANG=C.UTF-8' >> ~/.profile && \
+    echo 'export LC_ALL=C.UTF-8' >> ~/.profile && \
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.profile
 
 # Switch back to root for SSH daemon and entrypoint setup
 USER root
