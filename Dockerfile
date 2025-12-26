@@ -114,6 +114,7 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | b
     NODE_PATH=$(nvm which default) && \
     NODE_DIR=$(dirname "$NODE_PATH") && \
     # Add nvm to PATH for interactive and non-interactive shells
+    # Note: nvm automatically adds npm global bin to PATH, no need to configure npm prefix
     echo 'export NVM_DIR="$HOME/.nvm"' >> ~/.bashrc && \
     echo '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"' >> ~/.bashrc && \
     echo '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"' >> ~/.bashrc && \
@@ -131,36 +132,36 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | b
 RUN export NVM_DIR="$HOME/.nvm" && \
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" && \
     [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" && \
-    # Try official Claude Code install script
-    if curl -fsSL https://claude.ai/install.sh | sh 2>/dev/null; then \
-        echo "✓ Claude Code CLI installed via official script"; \
-        CLAUDE_INSTALLED=true; \
-    # Alternative: Try npm package if available
-    elif npm install -g @anthropic/claude-code 2>/dev/null; then \
-        echo "✓ Claude Code CLI installed via npm"; \
-        CLAUDE_INSTALLED=true; \
-    # Fallback: Try alternative installation method
-    elif curl -fsSL https://github.com/anthropics/claude-code/releases/latest/download/install.sh | sh 2>/dev/null; then \
-        echo "✓ Claude Code CLI installed via GitHub release"; \
-        CLAUDE_INSTALLED=true; \
-    else \
-        echo "⚠ Warning: Claude Code CLI installation failed - you may need to install manually"; \
-        echo "  Try: curl -fsSL https://claude.ai/install.sh | sh"; \
-        CLAUDE_INSTALLED=false; \
-    fi && \
+    # Remove any conflicting npm config (nvm manages this)
+    rm -f ~/.npmrc && \
+    # Try npm package @anthropic-ai/claude-code first (most common)
+    (npm install -g @anthropic-ai/claude-code 2>/dev/null && \
+     echo "✓ Claude Code CLI installed via npm (@anthropic-ai/claude-code)" && \
+     CLAUDE_INSTALLED=true) || \
+    # Alternative: Try @anthropic/claude-code
+    (npm install -g @anthropic/claude-code 2>/dev/null && \
+     echo "✓ Claude Code CLI installed via npm (@anthropic/claude-code)" && \
+     CLAUDE_INSTALLED=true) || \
+    # Fallback: Try official install script
+    (curl -fsSL https://claude.ai/install.sh | sh 2>/dev/null && \
+     echo "✓ Claude Code CLI installed via official script" && \
+     CLAUDE_INSTALLED=true) || \
+    # Last resort: Try GitHub release
+    (curl -fsSL https://github.com/anthropics/claude-code/releases/latest/download/install.sh | sh 2>/dev/null && \
+     echo "✓ Claude Code CLI installed via GitHub release" && \
+     CLAUDE_INSTALLED=true) || \
+    (echo "⚠ Warning: Claude Code CLI installation failed" && \
+     echo "  You may need to install manually after container starts:" && \
+     echo "  npm install -g @anthropic-ai/claude-code" && \
+     CLAUDE_INSTALLED=false) && \
     # Add common Claude Code CLI paths to PATH
-    echo 'export PATH="$HOME/.claude/bin:$PATH"' >> ~/.bashrc && \
-    echo 'export PATH="$HOME/.local/bin/claude:$PATH"' >> ~/.bashrc && \
-    echo 'export PATH="$HOME/.claude/bin:$PATH"' >> ~/.profile && \
-    echo 'export PATH="$HOME/.local/bin/claude:$PATH"' >> ~/.profile && \
-    # Create Claude Code configuration directory
+    echo 'export PATH="$HOME/.claude/bin:$HOME/.local/bin/claude:$PATH"' >> ~/.bashrc && \
+    echo 'export PATH="$HOME/.claude/bin:$HOME/.local/bin/claude:$PATH"' >> ~/.profile && \
     mkdir -p ~/.config/claude-code && \
     # Add Claude Code to welcome banner info (if installed)
     if [ "$CLAUDE_INSTALLED" = "true" ]; then \
         echo 'export CLAUDE_CODE_AVAILABLE=true' >> ~/.bashrc; \
-        # Verify installation and show status
-        export PATH="$HOME/.claude/bin:$HOME/.local/bin/claude:$PATH" && \
-        (command -v claude >/dev/null 2>&1 && echo "✓ Claude Code CLI is ready to use" || echo "Note: claude command available after shell restart"); \
+        echo "✓ Claude Code CLI configured"; \
     fi
 
 # --- Install Python development tools ---
@@ -203,13 +204,13 @@ RUN echo '' >> ~/.bashrc && \
     echo '    echo "║     ██████╔╝███████╗ ╚████╔╝     ███████╗██║ ╚████║╚██████╔╝"' >> ~/.bashrc && \
     echo '    echo "║     ╚═════╝ ╚══════╝  ╚═══╝      ╚══════╝╚═╝  ╚═══╝ ╚═════╝"' >> ~/.bashrc && \
     echo '    echo "║                                                            ║"' >> ~/.bashrc && \
-    echo '    echo "║              Development Environment Container              ║"' >> ~/.bashrc && \
+    echo '    echo "║              Development Environment Container             ║"' >> ~/.bashrc && \
     echo '    echo "║                                                            ║"' >> ~/.bashrc && \
     echo '    echo "╠════════════════════════════════════════════════════════════╣"' >> ~/.bashrc && \
-    echo '    echo "║  🚀 Ready for Development                                 ║"' >> ~/.bashrc && \
+    echo '    echo "║  🚀 Ready for Development                                  ║"' >> ~/.bashrc && \
     echo '    echo "║  📦 Node.js 18 (via nvm) | Python 3.11                     ║"' >> ~/.bashrc && \
-    echo '    echo "║  🛠️  All tools pre-installed and configured               ║"' >> ~/.bashrc && \
-    echo '    echo "║  💻 Claude Code CLI available (type: claude --help)       ║"' >> ~/.bashrc && \
+    echo '    echo "║  🛠️  All tools pre-installed and configured                ║"' >> ~/.bashrc && \
+    echo '    echo "║  💻 Claude Code CLI available (type: claude --help)        ║"' >> ~/.bashrc && \
     echo '    echo "║  📁 Workspace: ~/workspace or ~/projects                   ║"' >> ~/.bashrc && \
     echo '    echo "╚════════════════════════════════════════════════════════════╝"' >> ~/.bashrc && \
     echo '    echo ""' >> ~/.bashrc && \

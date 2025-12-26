@@ -10,6 +10,9 @@ DOCKERFILE ?= Dockerfile
 BUILD_CONTEXT ?= .
 # Container username (default from Dockerfile)
 CONTAINER_USER := devuser
+# Data directory for volume mounts (defaults to ~/dev-environment-data)
+# Override with: make run DATA_DIR=/path/to/your/data
+DATA_DIR ?= $(HOME)/dev-environment-data
 
 # Full image name
 FULL_IMAGE_NAME := $(IMAGE_NAME):$(IMAGE_TAG)
@@ -78,23 +81,40 @@ tag: ## Tag the image with a new tag (usage: make tag NEW_TAG=v1.0.0)
 
 ##@ Container Management
 
-run: ## Run the container with SSH daemon (default - keeps container alive, usage: make run PORT=2222 SSH_PUBLIC_KEY="$(cat ~/.ssh/id_rsa.pub)")
+run: ## Run the container with SSH daemon (default - keeps container alive, usage: make run PORT=2222 SSH_PUBLIC_KEY="$(cat ~/.ssh/id_rsa.pub)" DATA_DIR=~/my-data)
 	@PORT=$${PORT:-2222}; \
+	DATA_DIR=$${DATA_DIR:-$(HOME)/dev-environment-data}; \
 	echo "Starting container with SSH daemon on port $$PORT..."; \
+	echo "Using data directory: $$DATA_DIR"; \
+	mkdir -p "$$DATA_DIR/workspace" "$$DATA_DIR/projects" "$$DATA_DIR/.claude" "$$DATA_DIR/.config" "$$DATA_DIR/.local" || true; \
+	chmod -R 755 "$$DATA_DIR" 2>/dev/null || true; \
 	docker rm -f dev-env 2>/dev/null || true; \
 	if [ -n "$$SSH_PUBLIC_KEY" ]; then \
 		docker run -d \
 			-p $$PORT:22 \
 			-e SSH_PUBLIC_KEY="$$SSH_PUBLIC_KEY" \
+			-v "$$DATA_DIR/workspace:/home/$(CONTAINER_USER)/workspace" \
+			-v "$$DATA_DIR/projects:/home/$(CONTAINER_USER)/projects" \
+			-v "$$DATA_DIR/.claude:/home/$(CONTAINER_USER)/.claude" \
+			-v "$$DATA_DIR/.claude.json:/home/$(CONTAINER_USER)/.claude.json" \
+			-v "$$DATA_DIR/.config:/home/$(CONTAINER_USER)/.config" \
+			-v "$$DATA_DIR/.local:/home/$(CONTAINER_USER)/.local" \
 			--name dev-env \
 			$(FULL_IMAGE_NAME); \
 	else \
 		docker run -d \
 			-p $$PORT:22 \
+			-v "$$DATA_DIR/workspace:/home/$(CONTAINER_USER)/workspace" \
+			-v "$$DATA_DIR/projects:/home/$(CONTAINER_USER)/projects" \
+			-v "$$DATA_DIR/.claude:/home/$(CONTAINER_USER)/.claude" \
+			-v "$$DATA_DIR/.claude.json:/home/$(CONTAINER_USER)/.claude.json" \
+			-v "$$DATA_DIR/.config:/home/$(CONTAINER_USER)/.config" \
+			-v "$$DATA_DIR/.local:/home/$(CONTAINER_USER)/.local" \
 			--name dev-env \
 			$(FULL_IMAGE_NAME); \
 	fi
 	@echo "Container 'dev-env' is running!"
+	@echo "Data directory: $${DATA_DIR:-$(HOME)/dev-environment-data}"
 	@echo "SSH into it: ssh -p $${PORT:-2222} $(CONTAINER_USER)@localhost"
 
 bash: ## Run the container interactively with bash (container exits when you exit)
