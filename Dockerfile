@@ -270,6 +270,19 @@ RUN echo '' >> ~/.bashrc && \
     echo 'export LC_ALL=C.UTF-8' >> ~/.profile && \
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.profile
 
+# --- Install Playwright (separate RUN for easy updates and layer caching) ---
+# Install both Node.js and Python versions of Playwright
+RUN export NVM_DIR="$HOME/.nvm" && \
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" && \
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" && \
+    # Install Node.js version
+    npm install -g playwright && \
+    # Install Python version
+    python3 -m pip install --user playwright && \
+    # Install browser binaries (shared between Node.js and Python)
+    # Use sudo -E to preserve environment variables (PATH) so npx is found
+    sudo -E env "PATH=$PATH" npx playwright install --with-deps chromium firefox webkit
+
 # Switch back to root for SSH daemon and entrypoint setup
 USER root
 
