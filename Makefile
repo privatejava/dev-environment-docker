@@ -91,6 +91,7 @@ run: ## Run the container with SSH daemon (default - keeps container alive, usag
 	docker rm -f dev-env 2>/dev/null || true; \
 	if [ -n "$$SSH_PUBLIC_KEY" ]; then \
 		docker run -d \
+			--restart unless-stopped \
 			-p $$PORT:22 \
 			-e SSH_PUBLIC_KEY="$$SSH_PUBLIC_KEY" \
 			-v "$$DATA_DIR/workspace:/home/$(CONTAINER_USER)/workspace" \
@@ -103,6 +104,7 @@ run: ## Run the container with SSH daemon (default - keeps container alive, usag
 			$(FULL_IMAGE_NAME); \
 	else \
 		docker run -d \
+			--restart unless-stopped \
 			-p $$PORT:22 \
 			-v "$$DATA_DIR/workspace:/home/$(CONTAINER_USER)/workspace" \
 			-v "$$DATA_DIR/projects:/home/$(CONTAINER_USER)/projects" \
