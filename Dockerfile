@@ -49,6 +49,8 @@ RUN apt-get update && \
     netcat-openbsd \
     tcpdump \
     strace \
+    # File transfer and sync
+    rsync \
     # Terminal multiplexer
     tmux \
     screen \
@@ -62,6 +64,11 @@ RUN apt-get update && \
     man-db \
     manpages \
     locales \
+    lsof \
+    file \
+    patch \
+    xz-utils \
+    socat \
     && apt-get clean && \
     rm -rf /var/lib/apt/lists/* && \
     # Configure locale to fix locale warnings (C.UTF-8 is already available, just configure it)
